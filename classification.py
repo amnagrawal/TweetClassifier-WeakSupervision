@@ -10,17 +10,17 @@ import matplotlib.pyplot as plt
 import seaborn as sn
 
 
-def train_model(classifier, feature_vector_train, label, feature_vector_valid, valid_y, is_neural_net=False):
+def train_model(classifier, trainx, trainy, testx, testy, is_neural_net=False):
     # fit the training dataset on the classifier
-    classifier.fit(feature_vector_train, label)
+    classifier.fit(trainx, trainy)
 
     # predict the labels on validation dataset
-    predictions = classifier.predict(feature_vector_valid)
+    predictions = classifier.predict(testx)
 
     if is_neural_net:
         predictions = predictions.argmax(axis=-1)
 
-    return accuracy_score(predictions, valid_y), confusion_matrix(predictions, valid_y)
+    return accuracy_score(predictions, testy), confusion_matrix(predictions, testy)
 
 
 def classify(data, method):
@@ -35,23 +35,19 @@ def classify(data, method):
     xtest_tfidf = tfidf_vector.transform(test_x)
 
     accuracy, cm = train_model(LogisticRegression(), xtrain_tfidf, train_y, xtest_tfidf, test_y)
-    print(f"LR ACCURACY {method}: {str(round(accuracy, 3))}")
+    print(f"Logistic Regression accuracy {method}: {str(round(accuracy, 3))}")
     df_cm = np.array(cm)
-    sn.heatmap(df_cm, annot=True, annot_kws={"size": 16})
+    sn.heatmap(cm, annot=True, annot_kws={"size": 16}, xticklabels=True, yticklabels=True)
     plt.title(method)
     plt.show()
 
 
-def main():
+if __name__ == '__main__':
     data_dir = 'data'
-    data_file = 'train_test_dataset.csv'
+    data_file = 'training_dataset.csv'
     data = pd.read_csv(os.path.join(data_dir, data_file))
     classify(data, "without weak supervision")
 
-    snorkel_data_file = 'new_labelled_brexit_preproc.csv'
+    snorkel_data_file = 'new_labeled_data.csv'
     data2 = pd.read_csv(os.path.join(data_dir, snorkel_data_file))
     classify(data2, "with weak supervision")
-
-
-if __name__=='__main__':
-    main()
