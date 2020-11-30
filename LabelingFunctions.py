@@ -4,14 +4,19 @@ import scipy
 import collections
 import numpy as np
 import os
+from sklearn.model_selection import train_test_split
 from snorkel.labeling import labeling_function, PandasLFApplier
-from snorkel.labeling import LFAnalysis
+from snorkel.labeling import LFAnalysis, filter_unlabeled_dataframe
+from snorkel.labeling.model import LabelModel
 
 data_dir = 'data'
 data_file = 'train_test_dataset.csv'
 file = os.path.join(data_dir, data_file)
-labeled_data = pd.read_csv(file, usecols=[0, 1])
+data = pd.read_csv(file, usecols=[0, 1])
+# train_x, test_x, train_y, test_y = train_test_split(labeled_data.tweets, labeled_data.label, test_size=0.2,
+#                                                     stratify=labeled_data.label)
 
+train_df, test_df = train_test_split(data, test_size=0.2, shuffle=True, random_state=42)
 STAY = 0
 LEAVE = 1
 ABSTAIN = -1
@@ -23,10 +28,10 @@ ABSTAIN = -1
 def usual_hashtags_stay(df):
     # TODO: programmatically get common hashtags
     hashtags = ["#SayYes2Europe", "#StrongerIN", "#bremain", "#Stay", "#ukineu", "#votein", "#betteroffin",
-                "#leadnotleave", "#VoteYES", "#yes2eu", "#yestoeu"]
+                "#leadnotleave", "#VoteYES", "#yes2eu", "#yestoeu", "#Remain"]
     text = df.tweets.lower()
     for hashtag in hashtags:
-        if hashtag in text:
+        if hashtag.lower() in text:
             return STAY
 
     return ABSTAIN
@@ -61,7 +66,7 @@ def usual_hashtags_leave(df):
 
     text = df.tweets.lower()
     for hashtag in hashtags:
-        if hashtag in text:
+        if hashtag.lower() in text:
             return LEAVE
 
     return ABSTAIN
@@ -86,7 +91,7 @@ def usual_texts_leave(df):
 
 lfs = [usual_hashtags_stay, usual_texts_stay, usual_texts_leave, usual_hashtags_leave]
 applier = PandasLFApplier(lfs=lfs)
-L_train = applier.apply(labeled_data)
+L_train = applier.apply(train_df)
 print(LFAnalysis(L_train, lfs=lfs).lf_summary())
 # TODO: try to improve coverage
 
@@ -94,7 +99,7 @@ save_file = os.path.join(data_dir, 'ground_truth_matrix')
 np.save(save_file, L_train, allow_pickle=True)
 
 golden_labels = []
-for y in labeled_data.label:
+for y in train_df.label:
     if y == 'leave':
         golden_labels.append(LEAVE)
     if y == 'stay':
@@ -110,3 +115,22 @@ print(LFAnalysis(L_unlabeled, lfs=lfs).lf_summary())
 
 save_file = os.path.join(data_dir, 'matrix_for_new_labels')
 np.save(save_file, L_train, allow_pickle=True)
+
+label_model = LabelModel(cardinality=2, verbose=True)
+label_model.fit(L_train=L_train, n_epochs=500, log_freq=100, seed=123)
+
+L_test = applier.apply(test_df)
+# to_numerical = lambda x: x=='leave'
+# Y_test = [to_numerical(item) for item in test_df.label]
+Y_test = []
+for item in test_df.label:
+    if item == 'stay':
+        Y_test.append(STAY)
+    else:
+        Y_test.append(LEAVE)
+
+Y_test = np.asarray(Y_test)
+label_model_acc = label_model.score(L=L_test, Y=Y_test, tie_break_policy="random")[
+    "accuracy"
+]
+print(f"Label Model Accuracy: {label_model_acc * 100:.1f}%")
