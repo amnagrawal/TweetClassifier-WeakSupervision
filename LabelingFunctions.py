@@ -9,18 +9,6 @@ from snorkel.labeling import labeling_function, PandasLFApplier
 from snorkel.labeling import LFAnalysis, filter_unlabeled_dataframe
 from snorkel.labeling.model import LabelModel
 
-data_dir = 'data'
-data_file = 'train_test_dataset.csv'
-file = os.path.join(data_dir, data_file)
-data = pd.read_csv(file, usecols=[0, 1])
-# train_x, test_x, train_y, test_y = train_test_split(labeled_data.tweets, labeled_data.label, test_size=0.2,
-#                                                     stratify=labeled_data.label)
-
-train_df, test_df = train_test_split(data, test_size=0.2, shuffle=True, random_state=42)
-STAY = 0
-LEAVE = 1
-ABSTAIN = -1
-
 
 # Labeling functions for tweets that suggest favoring Britain to "stay" in EU
 #TODO: rewrite these labeling functions using keyword-lookup (see snorkel tutorial)
@@ -88,6 +76,18 @@ def usual_texts_leave(df):
 
     return LEAVE if vote_found and stay_found else ABSTAIN
 
+data_dir = 'data'
+data_file = 'train_test_dataset.csv'
+file = os.path.join(data_dir, data_file)
+data = pd.read_csv(file, usecols=[0, 1])
+# train_x, test_x, train_y, test_y = train_test_split(labeled_data.tweets, labeled_data.label, test_size=0.2,
+#                                                     stratify=labeled_data.label)
+
+train_df, test_df = train_test_split(data, test_size=0.2, shuffle=True, random_state=42)
+STAY = 0
+LEAVE = 1
+ABSTAIN = -1
+
 
 lfs = [usual_hashtags_stay, usual_texts_stay, usual_texts_leave, usual_hashtags_leave]
 applier = PandasLFApplier(lfs=lfs)
@@ -130,7 +130,5 @@ for item in test_df.label:
         Y_test.append(LEAVE)
 
 Y_test = np.asarray(Y_test)
-label_model_acc = label_model.score(L=L_test, Y=Y_test, tie_break_policy="random")[
-    "accuracy"
-]
-print(f"Label Model Accuracy: {label_model_acc * 100:.1f}%")
+label_model_performance = label_model.score(L=L_test, Y=Y_test, tie_break_policy="random", metrics=['accuracy', 'precision', 'recall', 'f1'])
+print(f"Label Model Accuracy: {label_model_performance['accuracy'] * 100:.1f}%")
