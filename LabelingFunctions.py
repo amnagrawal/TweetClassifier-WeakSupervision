@@ -2,7 +2,7 @@ import pandas as pd
 import re
 import scipy
 import collections
-import numpy
+import numpy as np
 import os
 from snorkel.labeling import labeling_function, PandasLFApplier
 from snorkel.labeling import LFAnalysis
@@ -10,7 +10,7 @@ from snorkel.labeling import LFAnalysis
 data_dir = 'data'
 data_file = 'train_test_dataset.csv'
 file = os.path.join(data_dir, data_file)
-data = pd.read_csv(file, usecols=[0, 1])
+labeled_data = pd.read_csv(file, usecols=[0, 1])
 
 STAY = 0
 LEAVE = 1
@@ -86,5 +86,27 @@ def usual_texts_leave(df):
 
 lfs = [usual_hashtags_stay, usual_texts_stay, usual_texts_leave, usual_hashtags_leave]
 applier = PandasLFApplier(lfs=lfs)
-L_train = applier.apply(data)
+L_train = applier.apply(labeled_data)
 print(LFAnalysis(L_train, lfs=lfs).lf_summary())
+# TODO: try to improve coverage
+
+save_file = os.path.join(data_dir, 'ground_truth_matrix')
+np.save(save_file, L_train, allow_pickle=True)
+
+golden_labels = []
+for y in labeled_data.label:
+    if y == 'leave':
+        golden_labels.append(LEAVE)
+    if y == 'stay':
+        golden_labels.append(STAY)
+
+golden_labels = np.asarray(golden_labels)
+save_file = os.path.join(data_dir, 'ground_truth')
+np.save(save_file, golden_labels, allow_pickle=True)
+
+unlabeled_data = pd.read_csv(os.path.join(data_dir, 'brexit_unlabelled.csv'))
+L_unlabeled = applier.apply(unlabeled_data)
+print(LFAnalysis(L_unlabeled, lfs=lfs).lf_summary())
+
+save_file = os.path.join(data_dir, 'matrix_for_new_labels')
+np.save(save_file, L_train, allow_pickle=True)
