@@ -37,8 +37,11 @@ def classify(data, method):
     accuracy, cm = train_model(LogisticRegression(), xtrain_tfidf, train_y, xtest_tfidf, test_y)
     print(f"Logistic Regression accuracy {method}: {str(round(accuracy, 3))}")
     df_cm = np.array(cm)
-    sn.heatmap(cm, annot=True, annot_kws={"size": 16}, xticklabels=True, yticklabels=True)
+    sn.heatmap(cm, annot=True, annot_kws={"size": 16}, xticklabels=['stay', 'leave'], yticklabels=['stay', 'leave'],
+               fmt="d")
     plt.title(method)
+    # plt.xlabel("True values ")
+    plt.ylabel("Predicted values")
     plt.show()
 
 

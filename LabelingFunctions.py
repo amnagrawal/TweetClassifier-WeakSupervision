@@ -1,27 +1,34 @@
 import pandas as pd
-import re
-import scipy
-import collections
 import numpy as np
 import os
 from sklearn.model_selection import train_test_split
 from snorkel.labeling import labeling_function, PandasLFApplier
 from snorkel.labeling import LFAnalysis, filter_unlabeled_dataframe
 from snorkel.labeling.model import LabelModel
+from snorkel.preprocess.nlp import SpacyPreprocessor
 from snorkel.utils import probs_to_preds
-from preprocess_tweets import preprocess_tweets
+import nltk
+from nltk.corpus import wordnet as wn
+from snorkel.augmentation import transformation_function
+nltk.download("wordnet")
 
 STAY = 0
 LEAVE = 1
 ABSTAIN = -1
 
+spacy = SpacyPreprocessor(text_field="text", doc_field="doc", memoize=True)
+def get_synonyms(word):
+    """Get the synonyms of word from Wordnet."""
+    lemmas = set().union(*[s.lemmas() for s in wn.synsets(word)])
+    return list(set(l.name().lower().replace("_", " ") for l in lemmas) - {word})
+
+
 # Labeling functions for tweets that suggest favoring Britain to "stay" in EU
-#TODO: rewrite these labeling functions using keyword-lookup (see snorkel tutorial)
 @labeling_function()
 def usual_hashtags_stay(df):
-    # TODO: programmatically get common hashtags
     hashtags = ["#SayYes2Europe", "#StrongerIN", "#bremain", "#Stay", "#ukineu", "#votein", "#betteroffin",
-                "#leadnotleave", "#VoteYES", "#yes2eu", "#yestoeu", "#Remain"]
+                "#leadnotleave", "#VoteYES", "#yes2eu", "#yestoeu", "#Remain", "#VoteRemain", "#votestay",
+                "#UKtoStay", "ProjectHope"]
     text = df.tweets.lower()
     for hashtag in hashtags:
         if hashtag.lower() in text:
@@ -32,8 +39,9 @@ def usual_hashtags_stay(df):
 
 @labeling_function()
 def usual_texts_stay(df):
-    vote_words = ["vote", "voting", "voted", "choose", "chose"]
-    stay_words = ["stay", "remain", ""]
+    vote_words = ["vote", "voting", "voted", "choose", "chose", "choosing", "opt", "opted", "select", "selected",
+                  "prefer", "prefered"]
+    stay_words = ["stay", "remain", "staying", "remaining", "stayed", "remained"]
 
     vote_found, stay_found = False, False
     text = df.tweets.lower()
@@ -44,16 +52,16 @@ def usual_texts_stay(df):
         if word in stay_words:
             stay_found = True
 
-    return STAY if vote_found and stay_found else ABSTAIN
+    return STAY if vote_found or stay_found else ABSTAIN
 
 
 # Labeling functions for tweets that suggest favoring Britain to "leave" EU
 @labeling_function()
 def usual_hashtags_leave(df):
-    # TODO: programmatically get common hashtags
     hashtags = ["euroscepticism", "beLeave", "betteroffout", "britainout", "LeaveEU", "noTTIP", "TakeControl",
-                "VoteLeave", "VoteNO", "voteout", "end-of-europe", "leaveeuofficial", "NoThanksEU", "nothankseu",
-                "ukleave-eu", "vote-leave", "leaving EU", "strongOut", "voteLeave", "brexitnow", "leaveEUOfficial"]
+                "leaveeu", "VoteLeave", "VoteNO", "voteout", "end-of-europe", "leaveeuofficial", "NoThanksEU",
+                "nothankseu", "ukleave-eu", "vote-leave", "leaving EU", "strongOut", "voteLeave", "brexitnow",
+                "leaveEUOfficial", "#no2eu"]
     hashtags = ["#" + hashtag for hashtag in hashtags]
 
     text = df.tweets.lower()
@@ -66,8 +74,9 @@ def usual_hashtags_leave(df):
 
 @labeling_function()
 def usual_texts_leave(df):
-    vote_words = ["vote", "voting", "voted", "choose", "chose", "choosing"]
-    stay_words = ["leave", "exit", ""]
+    vote_words = ["vote", "voting", "voted", "choose", "chose", "choosing", "opt", "opted", "select", "selected",
+                  "prefer", "prefered"]
+    leave_words = ["leave", "exit", "farewell", "parting", "depart"]
 
     vote_found, stay_found = False, False
     text = df.tweets.lower()
@@ -75,14 +84,10 @@ def usual_texts_leave(df):
         if word in vote_words:
             vote_found = True
 
-        if word in stay_words:
+        if word in leave_words:
             stay_found = True
 
-    return LEAVE if vote_found and stay_found else ABSTAIN
-
-
-def main():
-    pass
+    return LEAVE if vote_found or stay_found else ABSTAIN
 
 
 if __name__ == "__main__":
@@ -97,23 +102,22 @@ if __name__ == "__main__":
     applier = PandasLFApplier(lfs=lfs)
     L_train = applier.apply(train_df)
     print(LFAnalysis(L_train, lfs=lfs).lf_summary())
-    # TODO: try to improve coverage
 
     save_file = os.path.join(data_dir, 'ground_truth_matrix')
     np.save(save_file, L_train, allow_pickle=True)
 
-    golden_labels = []
-    for y in train_df.label:
-        if y == 'leave':
-            golden_labels.append(LEAVE)
-        if y == 'stay':
-            golden_labels.append(STAY)
+    # golden_labels = []
+    # for y in train_df.label:
+    #     if y == 'leave':
+    #         golden_labels.append(LEAVE)
+    #     if y == 'stay':
+    #         golden_labels.append(STAY)
+    #
+    # golden_labels = np.asarray(golden_labels)
+    # save_file = os.path.join(data_dir, 'ground_truth')
+    # np.save(save_file, golden_labels, allow_pickle=True)
 
-    golden_labels = np.asarray(golden_labels)
-    save_file = os.path.join(data_dir, 'ground_truth')
-    np.save(save_file, golden_labels, allow_pickle=True)
-
-    unlabeled_data = pd.read_csv(os.path.join(data_dir, 'brexit_unlabelled.csv'))
+    unlabeled_data = pd.read_csv(os.path.join(data_dir, 'brexit_unlabeled.csv'))
     L_unlabeled = applier.apply(unlabeled_data)
     print(LFAnalysis(L_unlabeled, lfs=lfs).lf_summary())
 
