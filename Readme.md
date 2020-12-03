@@ -6,7 +6,7 @@ In recent years, Machine Learning has had a significant impact in the performanc
 - Expensive: Getting the dataset hand-engineered for features may require an expert’s intervention. This is often the case with the medical imaging dataset, where accurate labels to body scans (for example) can only be provided by a doctor. This leads to an increased cost for the overall data gathering process. 
 - Time consuming: These datasets are time-consuming to create and organise in a form ready to be fed to a model for training. 
 
-![](CS579\_%20Final%20Report.001.png)
+![](CS579_%20Final%20Report.001.png)
 
 Image source: <http://ai.stanford.edu/blog/weak-supervision/>  
 
@@ -74,7 +74,7 @@ Standard  python  libraries  required  for  a  ML  program  such  as  nltk,  num
 
 In  addition,  I  have  used  snorkel  to  provide  weak  supervision  sources  through  Labeling Functions. The Snorkel project started at Stanford in 2016, is a platform to build training data programmatically. 
 
-![](CS579\_%20Final%20Report.002.png)
+![](CS579_ Final Report.002.png)
 
 Image source: <http://ai.stanford.edu/blog/weak-supervision/>  
 
@@ -106,9 +106,9 @@ Note: Keywords and Hashtags to lookup for can be further refined to improve the 
 
 Labeling functions’ performance
 
-![](CS579\_%20Final%20Report.003.png)
+![](CS579_%20Final%20Report.003.png)
 
-![](CS579\_%20Final%20Report.004.png)
+![](CS579_%20Final%20Report.004.png)
 
 - Coverage indicates the fraction of data points, where the respective labeling function is able to label (albeit noisily) and not ‘Abstain’. 
 - Overlaps indicate the fraction of data points where more than one labeling function are able to label 
@@ -120,7 +120,7 @@ Labeling functions’ performance
 
 Logistic Regression Classifier’s performance
 
-![](CS579\_%20Final%20Report.005.png)
+![](CS579_%20Final%20Report.005.png)
 
 - Notice that the classifier accuracy is improved when weak supervision is used along with the ground\_truth labels. 
 - This is regardless of the fact that the labeling model produces less accurate labels. 
